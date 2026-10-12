@@ -1,0 +1,394 @@
+<title>Landlord Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: slim header with tabs, one working view below; rent grid is the centrepiece, other views are forms and ledgers. */
+:root{
+  --bg:#EEF1F4; --surface:#FFFFFF; --ink:#18222E; --muted:#5C6B7A; --line:#D7DEE5;
+  --accent:#1D5E8C; --accent-ink:#FFFFFF; --accent-soft:#DCEAF5;
+  --ok:#1F6B3A; --ok-soft:#DAF0E1; --warn:#8F5200; --warn-soft:#FBE9C8; --bad:#A3232D; --bad-soft:#F8DADD;
+  --font-body:'Schibsted Grotesk',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F161D; --surface:#17212B; --ink:#E5ECF2; --muted:#93A3B2; --line:#27343F;
+  --accent:#6BB4E6; --accent-ink:#08202F; --accent-soft:#1B3447;
+  --ok:#7FD39B; --ok-soft:#1B3626; --warn:#F0C070; --warn-soft:#3A2D12; --bad:#F39199; --bad-soft:#40222A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F161D; --surface:#17212B; --ink:#E5ECF2; --muted:#93A3B2; --line:#27343F;
+  --accent:#6BB4E6; --accent-ink:#08202F; --accent-soft:#1B3447;
+  --ok:#7FD39B; --ok-soft:#1B3626; --warn:#F0C070; --warn-soft:#3A2D12; --bad:#F39199; --bad-soft:#40222A; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5;padding-inline:16px;padding-block:20px 56px}
+.wrap{max-width:1040px;margin-inline:auto;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;justify-content:space-between}
+h1{font-size:clamp(24px,4vw,32px);letter-spacing:-.02em;margin:0;line-height:1.1}
+.sub{color:var(--muted);margin:2px 0 0}
+.badge{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;background:var(--warn-soft);color:var(--warn);padding:3px 9px;border-radius:99px}
+nav{display:flex;gap:2px;overflow-x:auto;border-bottom:1px solid var(--line)}
+nav button{font:inherit;font-weight:600;color:var(--muted);background:none;border:0;border-bottom:3px solid transparent;padding:10px 14px;cursor:pointer;white-space:nowrap}
+nav button[aria-current="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+nav button:hover{color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px}
+h2{font-size:17px;margin:0 0 12px;letter-spacing:-.01em}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+@media (max-width:760px){.grid2{grid-template-columns:minmax(0,1fr)}.card{padding:14px}}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
+.stat span{display:block;font-size:13px;color:var(--muted)}
+.stat b{display:block;font-family:var(--font-mono);font-weight:500;font-size:22px;margin-top:2px;letter-spacing:-.02em}
+.stat b.bad{color:var(--bad)}
+label{display:block;font-size:13px;font-weight:600;margin-bottom:4px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+textarea{font-family:var(--font-mono);font-size:13px;line-height:1.55;min-height:200px;resize:vertical}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-items:end}
+.btn{font:inherit;font-weight:600;cursor:pointer;background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent);border-radius:8px;padding:9px 14px}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--accent)}
+.btn.sm{padding:4px 10px;font-size:13px}
+.x{font:inherit;cursor:pointer;background:none;border:1px solid var(--line);color:var(--muted);border-radius:6px;width:28px;height:28px;line-height:1}
+.x:hover{color:var(--bad);border-color:var(--bad)}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th{font-family:var(--font-mono);font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;padding:6px 10px;border-bottom:2px solid var(--line);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+.r{text-align:right}.mono{font-family:var(--font-mono);font-size:13px}
+tfoot td{border-bottom:0;border-top:2px solid var(--line);font-weight:600}
+.pill{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.pill.paid{background:var(--ok-soft);color:var(--ok)}.pill.late{background:var(--bad-soft);color:var(--bad)}
+.pill.partial{background:var(--warn-soft);color:var(--warn)}.pill.upcoming{background:var(--accent-soft);color:var(--accent)}
+.cell{font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:2px;align-items:flex-start;width:100%;min-width:92px;background:none;border:1px solid transparent;border-radius:8px;padding:5px 6px;color:var(--ink)}
+.cell:hover{border-color:var(--accent)}
+.cell small{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.cell[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row .t{min-width:0;flex:1 1 220px}.row .t small{display:block;color:var(--muted)}
+.hint{color:var(--muted);font-size:13px;margin:0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{font:inherit;font-size:13px;background:none;color:var(--ink);border:0;padding:4px 12px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.flat{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-items:end;padding:14px 0;border-bottom:1px solid var(--line)}
+.flat:last-of-type{border-bottom:0}
+.tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.pcard{font:inherit;text-align:left;cursor:pointer;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.pcard:hover{border-color:var(--accent)}
+.pcard .top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.pcard small{color:var(--muted);overflow-wrap:anywhere}
+footer{color:var(--muted);font-size:13px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
+</style>
+
+<div class="wrap" id="app">
+  <header>
+    <div><h1>Landlord Ledger</h1><p class="sub">Rent, costs and a yearly summary for one to five properties.</p></div>
+    <span class="badge" id="badge" hidden>Example data</span>
+  </header>
+  <nav id="nav" aria-label="Sections"></nav>
+  <div id="view"></div>
+  <footer><span>Data stays in this browser. A full version would sync across devices and read bank statements.</span>
+    <span class="tools"><button class="btn ghost sm" type="button" data-a="sample">Load example data</button><button class="btn ghost sm" type="button" data-a="clear">Start empty</button></span></footer>
+</div>
+
+<script>
+const eur=new Intl.NumberFormat('fi-FI',{style:'currency',currency:'EUR'});
+const fm=v=>eur.format(v);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num=v=>{const n=parseFloat(String(v).replace(',','.'));return isFinite(n)?n:0;};
+const uid=()=>Math.random().toString(36).slice(2,9);
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const TODAY=iso(new Date());
+function lastMonths(n){const d=new Date(),o=[];for(let i=n-1;i>=0;i--){const x=new Date(d.getFullYear(),d.getMonth()-i,1);o.push(x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0'));}return o;}
+const MS=lastMonths(6),CUR=MS[MS.length-1],YEAR=TODAY.slice(0,4);
+const dueISO=(ym,day)=>ym+'-'+String(Math.min(28,Math.max(1,Math.round(day)||1))).padStart(2,'0');
+const mlabel=ym=>{const [y,m]=ym.split('-');return new Date(+y,+m-1,1).toLocaleDateString('en-GB',{month:'short',year:'2-digit'});};
+const mlong=ym=>{const [y,m]=ym.split('-');return new Date(+y,+m-1,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'});};
+const dlabel=s=>new Date(s+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+const FI=['tammi','helmi','maalis','huhti','touko','kesä','heinä','elo','syys','loka','marras','joulu'];
+const CATS=['Maintenance charge (hoitovastike)','Water charge (vesimaksu)','Repairs (korjaukset)','Insurance (vakuutus)','Loan interest (lainankorot)','Cleaning (siivous)','Other'];
+
+function sample(){
+  const props=[{id:'a',name:'Studio, Kallio',type:'Apartment',addr:'Esimerkkikatu 12 B 14, 00530 Helsinki',tid:'t1',rent:890,due:20,dep:1780,maint:168},
+    {id:'b',name:'2 rooms, Tikkurila',type:'Row house',addr:'Mallitie 5, 01300 Vantaa',tid:'t2',rent:1050,due:5,dep:2100,maint:231},
+    {id:'c',name:'1 room, Hervanta',type:'Apartment',addr:'Näyteväylä 3 A 2, 33720 Tampere',tid:'t3',rent:640,due:1,dep:1280,maint:119}];
+  const pays=[],exps=[];
+  MS.forEach((ym,i)=>{const cur=i===MS.length-1,last=i===MS.length-2;
+    props.forEach(p=>{
+      const d0=dueISO(ym,p.due),d=d0>TODAY?TODAY:d0;
+      if(p.id==='a'&&cur)return;
+      if(p.id==='b'&&last)return;
+      if(p.id==='c'&&last){pays.push({id:uid(),pid:p.id,month:ym,amount:400,date:d});return;}
+      pays.push({id:uid(),pid:p.id,month:ym,amount:p.rent,date:d});
+    });
+    if(i>=MS.length-3){props.forEach(p=>{if(p.id==='c'&&cur)return;exps.push({id:uid(),pid:p.id,date:dueISO(ym,1)>TODAY?TODAY:dueISO(ym,1),cat:CATS[0],amount:p.maint,note:'Monthly charge'});});}
+  });
+  exps.push({id:uid(),pid:'',date:YEAR+'-03-12',cat:CATS[3],amount:186,note:'Landlord home insurance, yearly'});
+  exps.push({id:uid(),pid:'b',date:MS[2]+'-03',cat:CATS[2],amount:340,note:'Dishwasher replacement'});
+  exps.push({id:uid(),pid:'c',date:MS[4]+'-21',cat:CATS[5],amount:95,note:'Cleaning after tenant change'});
+  const tenants=[
+    {id:'t1',name:'M. Virtanen',phone:'+358 40 000 0001',email:'m.virtanen@example.com',since:'2024-09-01',note:'Pays by bank transfer. Prefers email.',lang:'en'},
+    {id:'t2',name:'J. Korhonen',phone:'+358 40 000 0002',email:'j.korhonen@example.com',since:'2023-02-01',note:'Family of four. Has a car, uses the yard parking space.',lang:'fi'},
+    {id:'t3',name:'S. Laine',phone:'+358 40 000 0003',email:'s.laine@example.com',since:'2025-06-15',note:'Student. Rent sometimes arrives a few days late.',lang:'fi'},
+    {id:'t4',name:'A. Nieminen',phone:'+358 40 000 0004',email:'a.nieminen@example.com',since:'',note:'Interested in a studio from December. Not assigned yet.',lang:'en'}];
+  return {v:4,example:true,tenants,props,pays,exps,taxRate:30};
+}
+const KEY='landlord-ledger-v1';
+function load(){try{const r=localStorage.getItem(KEY);if(r){const o=JSON.parse(r);if(o&&o.props&&!(o.example&&!(o.v>=4)))return migrate(o);}}catch(e){}return sample();}
+function migrate(o){o.tenants=o.tenants||[];o.props.forEach(p=>{if(p.tenant&&!p.tid){let t=o.tenants.find(x=>x.name===p.tenant);if(!t){t={id:uid(),name:p.tenant,phone:'',email:'',since:'',note:'',lang:'en'};o.tenants.push(t);}p.tid=t.id;}});return o;}
+let S=load();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+const ui={tab:'overview',remind:null,lang:'en',pay:null,year:YEAR};
+
+function status(p,ym){
+  const paid=S.pays.filter(x=>x.pid===p.id&&x.month===ym).reduce((a,x)=>a+x.amount,0);
+  const due=dueISO(ym,p.due),left=Math.max(0,p.rent-paid);
+  let st;
+  if(paid>=p.rent-0.005)st='paid';else if(TODAY>due)st=paid>0?'partial':'late';else st='upcoming';
+  return {paid,left,st,due};
+}
+const flat=id=>S.props.find(p=>p.id===id);
+const tenantOf=p=>S.tenants.find(t=>t.id===p.tid);
+const tn=p=>{const t=tenantOf(p);return t?t.name:'No tenant';};
+const flatName=id=>{const p=flat(id);return p?p.name:'General';};
+const sum=a=>a.reduce((x,y)=>x+y,0);
+function overdue(){
+  const o=[];S.props.forEach(p=>MS.forEach(ym=>{const s=status(p,ym);if(s.st==='late'||s.st==='partial')o.push({p,ym,...s});}));
+  return o;
+}
+const pillText={paid:'Paid',late:'Late',partial:'Part paid',upcoming:'Due'};
+
+function reminderText(o){
+  if(ui.lang==='fi'){
+    const [y,m]=o.ym.split('-'),d=new Date(o.due+'T12:00:00').toLocaleDateString('fi-FI');
+    return `Hei${tenantOf(o.p)?' '+tenantOf(o.p).name:''},\n\nMuistutuksena, että ${FI[+m-1]}kuun vuokra${o.p.addr?' ('+o.p.addr+')':''} (${fm(o.left)}) on vielä maksamatta. Eräpäivä oli ${d}.\n\nVoisitko maksaa sen mahdollisimman pian? Jos olet jo maksanut, voit unohtaa tämän viestin.\n\nYstävällisin terveisin\n[Nimesi]`;
+  }
+  return `Hi ${tenantOf(o.p)?tenantOf(o.p).name:'there'},\n\nA quick note that the rent for ${mlong(o.ym)}${o.p.addr?' ('+o.p.addr+')':''} (${fm(o.left)}) is still unpaid. It was due on ${dlabel(o.due)}.\n\nCould you pay it as soon as you can? If you have already paid, please ignore this message.\n\nBest regards,\n[Your name]`;
+}
+
+/* Views */
+function vOverview(){
+  const exp=S.pays.filter(x=>x.month===CUR),coll=sum(exp.map(x=>x.amount)),expect=sum(S.props.map(p=>p.rent));
+  const od=overdue(),odSum=sum(od.map(o=>o.left));
+  const inc=sum(S.pays.filter(x=>x.date.startsWith(YEAR)).map(x=>x.amount)),cost=sum(S.exps.filter(x=>x.date.startsWith(YEAR)).map(x=>x.amount));
+  if(!S.props.length)return `<div class="card"><h2>No properties yet</h2><p class="hint">Open the Properties tab and add your first property, or load the example data below.</p></div>`;
+  let rem='';
+  if(ui.remind){const o=od.find(x=>x.p.id===ui.remind.pid&&x.ym===ui.remind.ym);
+    if(o)rem=`<div class="card"><div class="row" style="padding-top:0"><h2 style="margin:0">Reminder for ${esc(tn(o.p))}</h2><div class="seg" role="group" aria-label="Language"><button type="button" data-a="lang" data-l="en" aria-pressed="${ui.lang==='en'}">English</button><button type="button" data-a="lang" data-l="fi" aria-pressed="${ui.lang==='fi'}">Suomi</button></div></div>
+      <textarea id="rtext" aria-label="Reminder message">${esc(reminderText(o))}</textarea>
+      <div class="tools" style="margin-top:10px"><button class="btn" type="button" data-a="copy" data-src="rtext">Copy message</button><span class="hint" id="say"></span></div></div>`;}
+  return `<div class="stats">
+    <div class="stat"><span>Rent received for ${mlong(CUR)}</span><b>${fm(coll)}</b><span>of ${fm(expect)} expected</span></div>
+    <div class="stat"><span>Overdue in the last 6 months</span><b class="${odSum?'bad':''}">${fm(odSum)}</b><span>${od.length} unpaid ${od.length===1?'month':'months'}</span></div>
+    <div class="stat"><span>Costs so far in ${YEAR}</span><b>${fm(cost)}</b><span>${S.exps.filter(x=>x.date.startsWith(YEAR)).length} entries</span></div>
+    <div class="stat"><span>Rent minus costs in ${YEAR}</span><b>${fm(inc-cost)}</b><span>before tax</span></div></div>
+    <div class="card"><h2>Needs attention</h2>${od.length?od.map(o=>`<div class="row"><div class="t"><b>${esc(o.p.name)}</b> · ${esc(tn(o.p))}<small>${mlong(o.ym)} · ${fm(o.left)} unpaid · was due ${dlabel(o.due)}</small></div>
+      <span class="tools"><span class="pill ${o.st}">${pillText[o.st]}</span><button class="btn ghost sm" type="button" data-a="remind" data-p="${o.p.id}" data-m="${o.ym}">Write reminder</button><button class="btn ghost sm" type="button" data-a="cell" data-p="${o.p.id}" data-m="${o.ym}">Record payment</button></span></div>`).join(''):'<p class="hint">Everything due has been paid. Nothing to chase.</p>'}</div>${rem}`;
+}
+function vRent(){
+  if(!S.props.length)return `<div class="card"><p class="hint">Add a property first in the Properties tab.</p></div>`;
+  const pay=ui.pay||{pid:S.props[0].id,ym:CUR,amount:S.props[0].rent,date:TODAY};
+  const grid=S.props.map(p=>`<tr><td><b>${esc(p.name)}</b><br><span class="hint">${esc(p.type||'Apartment')}${p.addr?' · '+esc(p.addr):''}</span><br><span class="hint">${esc(tn(p))} · ${fm(p.rent)}, due day ${p.due}</span></td>${MS.map(ym=>{const s=status(p,ym);
+    return `<td><button class="cell" type="button" data-a="cell" data-p="${p.id}" data-m="${ym}" aria-pressed="${pay.pid===p.id&&pay.ym===ym}" aria-label="${esc(p.name)} ${mlong(ym)}: ${pillText[s.st]}"><span class="pill ${s.st}">${pillText[s.st]}</span><small>${s.st==='paid'?fm(s.paid):fm(s.left)+' left'}</small></button></td>`;}).join('')}</tr>`).join('');
+  const pf=ui.pf||(ui.pf={flat:'',month:'',sort:'new'});if(pf.flat&&!flat(pf.flat))pf.flat='';
+  const filtered=!!(pf.flat||pf.month);
+  const all=S.pays.filter(x=>(!pf.flat||x.pid===pf.flat)&&(!pf.month||x.month===pf.month)).sort((a,b)=>pf.sort==='old'?a.date.localeCompare(b.date):pf.sort==='big'?b.amount-a.amount:b.date.localeCompare(a.date));
+  const recent=(ui.allPays||filtered)?all:all.slice(0,6);
+  const payMonths=[...new Set(S.pays.map(x=>x.month))].sort().reverse();
+  return `<div class="card"><h2>Rent roll, last 6 months</h2><div class="tw"><table><thead><tr><th>Property</th>${MS.map(m=>`<th>${mlabel(m)}</th>`).join('')}</tr></thead><tbody>${grid}</tbody></table></div><p class="hint" style="margin-top:10px">Click a month to fill in the payment form below.</p></div>
+  <div class="card"><h2>Record a payment</h2><form data-f="pay" class="form">
+    <div><label for="f-p">Property</label><select id="f-p">${S.props.map(p=>`<option value="${p.id}" ${p.id===pay.pid?'selected':''}>${esc(p.name)}</option>`).join('')}</select></div>
+    <div><label for="f-m">Rent month</label><select id="f-m">${MS.map(m=>`<option value="${m}" ${m===pay.ym?'selected':''}>${mlong(m)}</option>`).join('')}</select></div>
+    <div><label for="f-a">Amount, €</label><input id="f-a" type="number" step="0.01" min="0" value="${pay.amount}" required></div>
+    <div><label for="f-d">Date received</label><input id="f-d" type="date" value="${pay.date}" required></div>
+    <div><button class="btn" type="submit">Save payment</button></div></form></div>
+  <div class="card"><h2>Payments received</h2>${S.pays.length?`<div class="form" style="margin-bottom:12px">
+    <div><label for="pf-flat">Property</label><select id="pf-flat"><option value="">All properties</option>${S.props.map(p=>`<option value="${p.id}" ${pf.flat===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select></div>
+    <div><label for="pf-month">Rent for</label><select id="pf-month"><option value="">All months</option>${payMonths.map(m=>`<option value="${m}" ${pf.month===m?'selected':''}>${mlong(m)}</option>`).join('')}</select></div>
+    <div><label for="pf-sort">Sort by</label><select id="pf-sort"><option value="new" ${pf.sort==='new'?'selected':''}>Newest first</option><option value="old" ${pf.sort==='old'?'selected':''}>Oldest first</option><option value="big" ${pf.sort==='big'?'selected':''}>Largest first</option></select></div>
+    ${filtered?'<div><button class="btn ghost" type="button" data-a="pfclear">Clear filters</button></div>':''}</div>
+    <p class="hint" style="margin-bottom:4px">${all.length} ${all.length===1?'payment':'payments'}${filtered?' match':''} · ${fm(sum(all.map(x=>x.amount)))}</p>`:''}${all.length?recent.map(x=>`<div class="row"><div class="t"><b>${esc(flatName(x.pid))}</b><small>${esc(flat(x.pid)?tn(flat(x.pid)):'')} · rent for ${mlong(x.month)} · received ${dlabel(x.date)}</small></div><span class="tools"><b class="mono">${fm(x.amount)}</b><button class="x" type="button" data-a="delpay" data-id="${x.id}" aria-label="Delete payment">×</button></span></div>`).join('')+(!filtered&&all.length>6?`<div style="padding-top:10px"><button class="btn ghost sm" type="button" data-a="morepays">${ui.allPays?'Show fewer':'Show all '+all.length}</button></div>`:''):`<p class="hint">${S.pays.length?'No payments match these filters.':'No payments recorded yet. Use the form above when rent arrives.'}</p>`}</div>`;
+}
+const OTHER=CATS.slice(1);
+const hasMaint=(p,ym)=>S.exps.some(x=>x.pid===p.id&&x.cat===CATS[0]&&x.date.startsWith(ym));
+function addMaint(p){const d=dueISO(CUR,1);S.exps.push({id:uid(),pid:p.id,date:d>TODAY?TODAY:d,cat:CATS[0],amount:p.maint,note:'Monthly charge'});}
+function vExp(){
+  const yr=S.exps.filter(x=>x.date.startsWith(YEAR));
+  const groups=[...S.props.map(p=>({n:p.name,id:p.id})),{n:'General, all properties',id:''}].map(g=>({n:g.n,v:sum(yr.filter(x=>x.pid===g.id).map(x=>x.amount))})).filter(g=>g.v>0);
+  const one=S.exps.filter(x=>x.cat!==CATS[0]).sort((a,b)=>b.date.localeCompare(a.date));
+  const shown=ui.allCosts?one:one.slice(0,6);
+  const maintYtd=sum(yr.filter(x=>x.cat===CATS[0]).map(x=>x.amount));
+  const todo=S.props.filter(p=>(p.maint||0)>0&&!hasMaint(p,CUR));
+  const maintRows=S.props.map(p=>{
+    const st=!(p.maint>0)?'<span class="hint">Enter the monthly amount</span>':hasMaint(p,CUR)?`<span class="pill paid">Added for ${mlabel(CUR)}</span>`:`<button class="btn sm" type="button" data-a="addmaint" data-p="${p.id}">Add ${mlabel(CUR)}</button>`;
+    return `<div class="row"><div class="t"><b>${esc(p.name)}</b></div><span class="tools"><input style="width:120px" type="number" min="0" step="1" data-maint="${p.id}" value="${p.maint||''}" placeholder="€ per month" aria-label="Monthly maintenance charge for ${esc(p.name)}">${st}</span></div>`;}).join('');
+  return `<div class="card"><h2>Costs in ${YEAR} so far</h2>${groups.length?groups.map(g=>`<div class="row"><div class="t">${esc(g.n)}</div><b class="mono">${fm(g.v)}</b></div>`).join('')+`<div class="row"><div class="t"><b>All properties together</b></div><b class="mono">${fm(sum(groups.map(g=>g.v)))}</b></div>`:'<p class="hint">No costs recorded for this year yet.</p>'}</div>
+  <div class="card"><h2>Monthly maintenance charge (hoitovastike)</h2><p class="hint" style="margin-bottom:6px">Type in what the housing company charges each property per month. After that, adding a month takes one click.</p>${S.props.length?maintRows:'<p class="hint">Add a property first in the Properties tab.</p>'}
+    ${todo.length>1?`<div style="padding-top:12px"><button class="btn" type="button" data-a="addmaintall">Add ${mlabel(CUR)} for all properties</button></div>`:''}
+    <p class="hint" style="margin-top:10px">Maintenance charges added in ${YEAR}: <b class="mono">${fm(maintYtd)}</b></p></div>
+  <div class="card"><h2>Add another cost</h2><p class="hint" style="margin-bottom:10px">For repairs, insurance, cleaning and anything else that is not the monthly charge.</p><form data-f="exp" class="form">
+    <div><label for="e-c">What for</label><select id="e-c">${OTHER.map(c=>`<option>${c}</option>`).join('')}</select></div>
+    <div><label for="e-p">Which property</label><select id="e-p"><option value="">All properties</option>${S.props.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></div>
+    <div><label for="e-a">Amount, €</label><input id="e-a" type="number" step="0.01" min="0" required></div>
+    <div><label for="e-d">Date</label><input id="e-d" type="date" value="${TODAY}" required></div>
+    <div><label for="e-n">Note (optional)</label><input id="e-n" placeholder="For example, new dishwasher"></div>
+    <div><button class="btn" type="submit">Add cost</button></div></form></div>
+  <div class="card"><h2>Other costs</h2>${one.length?shown.map(x=>`<div class="row"><div class="t"><b>${esc(x.note||x.cat)}</b><small>${esc(flatName(x.pid))} · ${esc(x.cat)} · ${dlabel(x.date)}</small></div><span class="tools"><b class="mono">${fm(x.amount)}</b><button class="x" type="button" data-a="delexp" data-id="${x.id}" aria-label="Delete cost">×</button></span></div>`).join('')+(one.length>6?`<div style="padding-top:10px"><button class="btn ghost sm" type="button" data-a="morecosts">${ui.allCosts?'Show fewer':'Show all '+one.length}</button></div>`:''):'<p class="hint">No other costs yet.</p>'}</div>`;
+}
+const TYPES=['Apartment','Studio','Row house','Detached house','Semi-detached house','Cottage','Commercial space','Garage or parking','Other'];
+const typePill=p=>`<span class="pill info">${esc(p.type||'Apartment')}</span>`;
+const byDateDesc=(a,b)=>b.date.localeCompare(a.date);
+function vFlats(){
+  const open=ui.open&&flat(ui.open);
+  if(open)return vProp(open);
+  const q=(ui.q||'').trim().toLowerCase(),tt=ui.tt||'';
+  const list=S.props.filter(x=>(!tt||(x.type||'Apartment')===tt)&&(!q||[x.name,x.addr,tn(x),x.type||'Apartment'].join(' ').toLowerCase().includes(q)));
+  const used=[...new Set(S.props.map(x=>x.type||'Apartment'))];
+  const cards=list.map(x=>{
+    const cs=status(x,CUR),od=MS.filter(m=>{const s=status(x,m).st;return s==='late'||s==='partial';}).length;
+    return `<button class="pcard" type="button" data-a="open" data-id="${x.id}"><span class="top"><b>${esc(x.name)}</b>${typePill(x)}</span><small>${esc(x.addr||'No address yet')}</small><small>${esc(tn(x))} · ${fm(x.rent)} per month</small><span class="tools"><span class="pill ${cs.st}">${mlabel(CUR)}: ${pillText[cs.st]}</span>${od?`<span class="pill late">${od} unpaid ${od===1?'month':'months'}</span>`:''}</span></button>`;}).join('');
+  return `<div class="card"><div class="form" style="margin-bottom:14px"><div><label for="ps-q">Search</label><input id="ps-q" type="text" value="${esc(ui.q||'')}" placeholder="Name, address, tenant or type" autocomplete="off"></div>
+    <div><label for="ps-t">Type</label><select id="ps-t"><option value="">All types</option>${used.map(t=>`<option ${tt===t?'selected':''}>${t}</option>`).join('')}</select></div>
+    <div><button class="btn" type="button" data-a="addflat">Add a property</button></div></div>
+    <p class="hint" style="margin-bottom:12px">${list.length} of ${S.props.length} ${S.props.length===1?'property':'properties'}. Click a card to open it.</p>
+    ${list.length?`<div class="pgrid">${cards}</div>`:`<p class="hint">${S.props.length?'No properties match your search.':'No properties yet. Add your first one.'}</p>`}</div>`;
+}
+function vProp(p){
+  const inc=sum(S.pays.filter(x=>x.pid===p.id&&x.date.startsWith(YEAR)).map(x=>x.amount));
+  const cost=sum(S.exps.filter(x=>x.pid===p.id&&x.date.startsWith(YEAR)).map(x=>x.amount));
+  const cs=status(p,CUR);
+  const months=[...MS].reverse().map(ym=>{const s=status(p,ym);
+    return `<div class="row"><div class="t"><b>${mlong(ym)}</b><small>Due ${dlabel(s.due)}</small></div><span class="tools"><span class="pill ${s.st}">${pillText[s.st]}</span><span class="mono">${s.st==='paid'?fm(s.paid):fm(s.left)+' left'}</span>${s.st==='paid'?'':`<button class="btn ghost sm" type="button" data-a="cell" data-p="${p.id}" data-m="${ym}">Record payment</button>`}</span></div>`;}).join('');
+  const pays=S.pays.filter(x=>x.pid===p.id).sort(byDateDesc).slice(0,6);
+  const costs=S.exps.filter(x=>x.pid===p.id).sort(byDateDesc).slice(0,8);
+  return `<div style="display:flex;flex-direction:column;gap:18px">
+    <div><button class="btn ghost sm" type="button" data-a="close">← All properties</button></div>
+    <div><h2 id="ptitle" style="font-size:24px;margin:0 0 4px">${esc(p.name)}</h2><div class="tools">${typePill(p)}<span class="hint">${esc(p.addr||'No address yet')}</span></div></div>
+    <div class="stats"><div class="stat"><span>${mlong(CUR)}</span><b style="font-size:18px;padding-top:4px"><span class="pill ${cs.st}">${pillText[cs.st]}</span></b><span>${esc(tn(p))} · ${fm(p.rent)} per month</span></div>
+      <div class="stat"><span>Rent received in ${YEAR}</span><b>${fm(inc)}</b></div><div class="stat"><span>Costs in ${YEAR}</span><b>${fm(cost)}</b></div><div class="stat"><span>Rent minus costs</span><b>${fm(inc-cost)}</b></div></div>
+    <div class="card"><h2>Rent, last 6 months</h2>${months}</div>
+    <div class="grid2"><div class="card"><h2>Payments received</h2>${pays.length?pays.map(x=>`<div class="row"><div class="t"><b>${fm(x.amount)}</b><small>For ${mlong(x.month)} · received ${dlabel(x.date)}</small></div><button class="x" type="button" data-a="delpay" data-id="${x.id}" aria-label="Delete payment">×</button></div>`).join(''):'<p class="hint">No payments yet.</p>'}</div>
+    <div class="card"><h2>Costs</h2>${costs.length?costs.map(x=>`<div class="row"><div class="t"><b>${esc(x.note||x.cat)}</b><small>${esc(x.cat)} · ${dlabel(x.date)}</small></div><span class="tools"><b class="mono">${fm(x.amount)}</b><button class="x" type="button" data-a="delexp" data-id="${x.id}" aria-label="Delete cost">×</button></span></div>`).join(''):'<p class="hint">No costs yet. Add them in the Costs tab.</p>'}</div></div>
+    <div class="card"><h2>Tenant</h2>${tenantBlock(p)}</div>
+    <div class="card"><h2>Details</h2><div class="flat" data-id="${p.id}">
+      <div><label>Name</label><input data-k="name" value="${esc(p.name)}"></div>
+      <div><label>Type of building</label><select data-k="type">${TYPES.map(t=>`<option ${(p.type||'Apartment')===t?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div style="grid-column:1/-1"><label>Address</label><input data-k="addr" value="${esc(p.addr||'')}" placeholder="Street, postcode and city"></div>
+      
+      <div><label>Monthly rent, €</label><input data-k="rent" type="number" min="0" step="1" value="${p.rent}"></div>
+      <div><label>Due day (1 to 28)</label><input data-k="due" type="number" min="1" max="28" value="${p.due}"></div>
+      <div><label>Deposit, €</label><input data-k="dep" type="number" min="0" step="1" value="${p.dep||0}"></div></div></div>
+    <div class="card"><h2>Remove this property</h2><p class="hint" style="margin-bottom:10px">This deletes the property and its recorded rent payments. Its costs stay on record as general costs.</p><button class="btn ghost" type="button" data-a="delflat" data-id="${p.id}">${ui.confirmDel===p.id?'Click again to remove':'Remove property'}</button></div></div>`;
+}
+function tenantBlock(p){
+  const t=tenantOf(p);
+  return `<div class="form"><div><label for="pt-sel">Who lives here</label><select id="pt-sel" data-pid="${p.id}"><option value="">No tenant (vacant)</option>${S.tenants.map(x=>`<option value="${x.id}" ${t&&t.id===x.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select></div></div>
+  ${t?`<div class="row" style="margin-top:10px"><div class="t"><b>${esc(t.name)}</b><small>${esc([t.phone,t.email].filter(Boolean).join(' · ')||'No contact details yet')}</small></div><button class="btn ghost sm" type="button" data-a="opent" data-id="${t.id}">Open profile</button></div>`:`<p class="hint" style="margin:8px 0">${S.tenants.length?'Pick a tenant from the list. ':''}Tenants are created in the Tenants tab first.</p><button class="btn ghost sm" type="button" data-a="tab" data-t="tenants">Go to Tenants</button>`}`;
+}
+const tenantProps=t=>S.props.filter(p=>p.tid===t.id);
+const contactLine=t=>esc([t.phone,t.email].filter(Boolean).join(' · ')||'No contact details yet');
+function vTenants(){
+  const open=ui.topen&&S.tenants.find(t=>t.id===ui.topen);
+  if(open)return vTenant(open);
+  const q=(ui.tq||'').trim().toLowerCase();
+  const list=S.tenants.filter(t=>!q||[t.name,t.phone,t.email,t.note,...tenantProps(t).map(p=>p.name+' '+(p.addr||''))].join(' ').toLowerCase().includes(q));
+  const cards=list.map(t=>{const ps=tenantProps(t);
+    return `<button class="pcard" type="button" data-a="opent" data-id="${t.id}"><span class="top"><b>${esc(t.name)}</b>${ps.length?'<span class="pill paid">Renting</span>':'<span class="pill upcoming">Not assigned</span>'}</span><small>${ps.length?esc(ps.map(p=>p.name).join(', ')):'Not assigned to a property yet'}</small><small>${contactLine(t)}</small></button>`;}).join('');
+  return `<div class="card"><div class="form" style="margin-bottom:14px"><div><label for="ts-q">Search</label><input id="ts-q" type="text" value="${esc(ui.tq||'')}" placeholder="Name, phone, email, property or note" autocomplete="off"></div>
+    <div><button class="btn" type="button" data-a="addtenant">Add a tenant</button></div></div>
+    <p class="hint" style="margin-bottom:12px">${list.length} of ${S.tenants.length} ${S.tenants.length===1?'tenant':'tenants'}. Click a card to open the profile. To move a tenant into a property, open the property and choose them there.</p>
+    ${list.length?`<div class="pgrid">${cards}</div>`:`<p class="hint">${S.tenants.length?'No tenants match your search.':'No tenants yet. Add the first one.'}</p>`}</div>`;
+}
+function vTenant(t){
+  const ps=tenantProps(t);
+  return `<div style="display:flex;flex-direction:column;gap:18px">
+    <div><button class="btn ghost sm" type="button" data-a="closet">← All tenants</button></div>
+    <div><h2 id="ttitle" style="font-size:24px;margin:0 0 4px">${esc(t.name)}</h2><span class="hint">${ps.length?'Renting '+esc(ps.map(p=>p.name).join(', ')):'Not assigned to a property yet'}</span></div>
+    <div class="card"><h2>Profile</h2><div class="flat" data-tid="${t.id}">
+      <div><label>Full name</label><input data-tk="name" value="${esc(t.name)}"></div>
+      <div><label>Phone</label><input data-tk="phone" type="tel" value="${esc(t.phone||'')}"></div>
+      <div><label>Email</label><input data-tk="email" type="email" value="${esc(t.email||'')}"></div>
+      <div><label>Lease started</label><input data-tk="since" type="date" value="${esc(t.since||'')}"></div>
+      <div><label>Reminder language</label><select data-tk="lang"><option value="en" ${t.lang!=='fi'?'selected':''}>English</option><option value="fi" ${t.lang==='fi'?'selected':''}>Suomi</option></select></div>
+      <div style="grid-column:1/-1"><label>Notes</label><textarea data-tk="note" style="min-height:90px;font-family:var(--font-body);font-size:15px">${esc(t.note||'')}</textarea></div></div></div>
+    <div class="card"><h2>Property</h2>${ps.length?ps.map(p=>`<div class="row"><div class="t"><b>${esc(p.name)}</b><small>${esc(p.type||'Apartment')} · ${esc(p.addr||'No address yet')} · ${fm(p.rent)} per month</small></div><button class="btn ghost sm" type="button" data-a="open" data-id="${p.id}">Open property</button></div>`).join(''):'<p class="hint">Not assigned yet. Open a property and choose this tenant in its Tenant section.</p>'}</div>
+    <div class="card"><h2>Remove this tenant</h2><p class="hint" style="margin-bottom:10px">This deletes the profile. Any property they were in becomes vacant. Recorded payments stay.</p><button class="btn ghost" type="button" data-a="deltenant" data-id="${t.id}">${ui.confirmDelT===t.id?'Click again to remove':'Remove tenant'}</button></div></div>`;
+}
+function vTax(){
+  const years=[...new Set([YEAR,String(+YEAR-1),...S.pays.map(x=>x.date.slice(0,4)),...S.exps.map(x=>x.date.slice(0,4))])].sort().reverse();
+  const y=years.includes(ui.year)?ui.year:YEAR;
+  const inc=S.props.map(p=>({n:p.name,v:sum(S.pays.filter(x=>x.pid===p.id&&x.date.startsWith(y)).map(x=>x.amount))}));
+  const incT=sum(inc.map(x=>x.v));
+  const cats=CATS.map(c=>({c,v:sum(S.exps.filter(x=>x.cat===c&&x.date.startsWith(y)).map(x=>x.amount))})).filter(x=>x.v>0);
+  const costT=sum(cats.map(x=>x.v)),net=incT-costT,tax=Math.max(0,net)*S.taxRate/100;
+  const text=`RENTAL SUMMARY ${y}\n\nRent received\n${inc.map(x=>`  ${x.n.padEnd(24).slice(0,24)} ${fm(x.v).padStart(12)}`).join('\n')}\n  ${'Total'.padEnd(24)} ${fm(incT).padStart(12)}\n\nCosts\n${cats.map(x=>`  ${x.c.padEnd(24).slice(0,24)} ${fm(x.v).padStart(12)}`).join('\n')||'  None'}\n  ${'Total'.padEnd(24)} ${fm(costT).padStart(12)}\n\nProfit before tax: ${fm(net)}\nEstimated tax at ${S.taxRate}%: ${fm(tax)}`;
+  return `<div class="card"><div class="form" style="margin-bottom:14px"><div><label for="t-y">Year</label><select id="t-y">${years.map(a=>`<option ${a===y?'selected':''}>${a}</option>`).join('')}</select></div>
+    <div><label for="t-r">Tax rate on profit, %</label><input id="t-r" type="number" min="0" max="60" step="0.5" value="${S.taxRate}"></div></div>
+    <div class="grid2"><div><h2>Rent received</h2><div class="tw"><table><tbody>${inc.map(x=>`<tr><td>${esc(x.n)}</td><td class="r mono">${fm(x.v)}</td></tr>`).join('')}</tbody><tfoot><tr><td>Total</td><td class="r mono">${fm(incT)}</td></tr></tfoot></table></div></div>
+    <div><h2>Costs</h2><div class="tw"><table><tbody>${cats.map(x=>`<tr><td>${esc(x.c)}</td><td class="r mono">${fm(x.v)}</td></tr>`).join('')||'<tr><td class="hint">No costs this year.</td><td></td></tr>'}</tbody><tfoot><tr><td>Total</td><td class="r mono">${fm(costT)}</td></tr></tfoot></table></div></div></div>
+    <div class="stats" style="margin-top:16px"><div class="stat"><span>Profit before tax</span><b>${fm(net)}</b></div><div class="stat"><span>Estimated tax</span><b>${fm(tax)}</b></div></div></div>
+  <div class="card"><h2>Summary to copy</h2><pre id="ttext" style="font-family:var(--font-mono);font-size:12.5px;white-space:pre-wrap;overflow-wrap:anywhere;margin:0 0 12px">${esc(text)}</pre>
+    <div class="tools"><button class="btn" type="button" data-a="copy" data-src="ttext">Copy summary</button><span class="hint" id="say"></span></div>
+    <p class="hint" style="margin-top:12px">This is an estimate that counts payments by the date you received them. Which costs are deductible, and the right tax rate, depend on your situation. Check with the tax authority or an accountant before filing.</p></div>`;
+}
+const TABS=[['overview','Overview',vOverview],['rent','Rent',vRent],['exp','Costs',vExp],['flats','Properties',vFlats],['tenants','Tenants',vTenants],['tax','Tax summary',vTax]];
+function render(){
+  $('#nav').innerHTML=TABS.map(t=>`<button type="button" data-a="tab" data-t="${t[0]}" aria-current="${t[0]===ui.tab}">${t[1]}</button>`).join('');
+  $('#view').innerHTML=TABS.find(t=>t[0]===ui.tab)[2]();
+  $('#badge').hidden=!S.example;
+  if(ui.focus){const el=document.getElementById(ui.focus);ui.focus=null;if(el){el.focus();try{if(el.type==='text'){const n=el.value.length;el.setSelectionRange(n,n);}}catch(e){}}}
+}
+function $(s){return document.querySelector(s);}
+function copyFrom(id){
+  const n=document.getElementById(id),txt=n.value!==undefined&&n.tagName==='TEXTAREA'?n.value:n.textContent,say=m=>{const s=$('#say');if(s)s.textContent=m;};
+  Promise.resolve().then(()=>navigator.clipboard.writeText(txt)).then(()=>say('Copied')).catch(()=>{try{if(n.select)n.select();else{const r=document.createRange();r.selectNodeContents(n);const g=getSelection();g.removeAllRanges();g.addRange(r);}}catch(e){}say('Text selected, copy it with your keyboard');});
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,d=b.dataset;
+  if(a==='tab'){ui.tab=d.t;if(d.t==='flats'){ui.open=null;ui.confirmDel=null;}if(d.t==='tenants'){ui.topen=null;ui.confirmDelT=null;}}
+  else if(a==='remind'){ui.remind={pid:d.p,ym:d.m};const tt=tenantOf(flat(d.p));if(tt&&tt.lang)ui.lang=tt.lang;}
+  else if(a==='lang'){ui.lang=d.l;}
+  else if(a==='cell'){const p=flat(d.p),s=status(p,d.m);ui.pay={pid:d.p,ym:d.m,amount:+(s.left||p.rent).toFixed(2),date:TODAY};ui.tab='rent';}
+  else if(a==='delpay'){S.pays=S.pays.filter(x=>x.id!==d.id);save();}
+  else if(a==='delexp'){S.exps=S.exps.filter(x=>x.id!==d.id);save();}
+  else if(a==='delflat'){if(ui.confirmDel!==d.id){ui.confirmDel=d.id;render();return;}ui.confirmDel=null;ui.open=null;S.props=S.props.filter(x=>x.id!==d.id);S.pays=S.pays.filter(x=>x.pid!==d.id);S.exps.forEach(x=>{if(x.pid===d.id)x.pid='';});ui.pay=null;ui.remind=null;save();}
+  else if(a==='addflat'){const id=uid();S.props.push({id,name:'New apartment',type:'Apartment',addr:'',tid:'',rent:800,due:5,dep:1600,maint:0});ui.open=id;ui.q='';ui.tt='';ui.confirmDel=null;save();}
+  else if(a==='morepays'){ui.allPays=!ui.allPays;}
+  else if(a==='morecosts'){ui.allCosts=!ui.allCosts;}
+  else if(a==='addmaint'){const p=flat(d.p);if(p&&!hasMaint(p,CUR)){addMaint(p);save();}}
+  else if(a==='addmaintall'){S.props.forEach(p=>{if((p.maint||0)>0&&!hasMaint(p,CUR))addMaint(p);});save();}
+  else if(a==='pfclear'){ui.pf={flat:'',month:'',sort:ui.pf?ui.pf.sort:'new'};}
+  else if(a==='open'){ui.tab='flats';ui.open=d.id;ui.confirmDel=null;try{window.scrollTo(0,0);}catch(e){}}
+  else if(a==='close'){ui.open=null;ui.confirmDel=null;}
+  else if(a==='opent'){ui.tab='tenants';ui.topen=d.id;ui.confirmDelT=null;try{window.scrollTo(0,0);}catch(e){}}
+  else if(a==='closet'){ui.topen=null;ui.confirmDelT=null;}
+  else if(a==='addtenant'){const id=uid();S.tenants.push({id,name:'New tenant',phone:'',email:'',since:'',note:'',lang:'en'});ui.topen=id;ui.tq='';ui.confirmDelT=null;save();}
+  else if(a==='deltenant'){if(ui.confirmDelT!==d.id){ui.confirmDelT=d.id;render();return;}ui.confirmDelT=null;ui.topen=null;S.tenants=S.tenants.filter(x=>x.id!==d.id);S.props.forEach(x=>{if(x.tid===d.id)x.tid='';});save();}
+  else if(a==='copy'){copyFrom(d.src);return;}
+  else if(a==='sample'){S=sample();ui.pay=null;ui.remind=null;save();}
+  else if(a==='clear'){S={v:4,example:false,tenants:[],props:[],pays:[],exps:[],taxRate:30};ui.pay=null;ui.remind=null;save();}
+  render();
+});
+document.addEventListener('submit',e=>{
+  const f=e.target.dataset.f;if(!f)return;e.preventDefault();
+  if(f==='pay'){const a=num($('#f-a').value);if(a<=0)return;S.pays.push({id:uid(),pid:$('#f-p').value,month:$('#f-m').value,amount:a,date:$('#f-d').value||TODAY});ui.pay=null;}
+  if(f==='exp'){const a=num($('#e-a').value);if(a<=0)return;S.exps.push({id:uid(),pid:$('#e-p').value,date:$('#e-d').value||TODAY,cat:$('#e-c').value,amount:a,note:$('#e-n').value.trim()});}
+  save();render();
+});
+document.addEventListener('input',e=>{const t=e.target;if(t.id==='ps-q'){ui.q=t.value;ui.focus='ps-q';render();}else if(t.id==='ts-q'){ui.tq=t.value;ui.focus='ts-q';render();}});
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset.maint!==undefined){const p=flat(t.dataset.maint);if(p){p.maint=Math.max(0,num(t.value));save();render();}}
+  else if(t.dataset.tk){const tt=S.tenants.find(x=>x.id===t.closest('[data-tid]').dataset.tid);if(tt){tt[t.dataset.tk]=t.value;save();if(t.dataset.tk==='name'){const h=document.getElementById('ttitle');if(h)h.textContent=t.value;}}}
+  else if(t.id==='pt-sel'){const pp=flat(t.dataset.pid);if(pp){pp.tid=t.value;save();render();}}
+  else if(t.dataset.k){const p=flat(t.closest('.flat').dataset.id),k=t.dataset.k;p[k]=['rent','due','dep'].includes(k)?num(t.value):t.value;if(k==='name'){const h=document.getElementById('ptitle');if(h)h.textContent=t.value;}if(k==='due')p.due=Math.min(28,Math.max(1,Math.round(p.due)||1));save();}
+  else if(t.id&&t.id.startsWith('pf-')){ui.pf=ui.pf||{flat:'',month:'',sort:'new'};ui.pf[t.id.slice(3)]=t.value;ui.focus=t.id;render();}
+  else if(t.id==='ps-t'){ui.tt=t.value;render();}
+  else if(t.id==='t-r'){S.taxRate=Math.min(60,Math.max(0,num(t.value)));save();render();}
+  else if(t.id==='t-y'){ui.year=t.value;render();}
+  else if(t.id==='f-p'){const p=flat(t.value);ui.pay={pid:t.value,ym:$('#f-m').value,amount:p?p.rent:0,date:$('#f-d').value};render();}
+});
+render();
+</script>
